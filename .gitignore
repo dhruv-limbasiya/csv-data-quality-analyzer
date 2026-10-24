@@ -1,0 +1,54 @@
+# ============================================
+# CSV Data Quality Analyzer — .gitignore
+# ============================================
+
+# ----- Python -----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+backend/venv/
+backend/.venv/
+
+# ----- Environment / Secrets -----
+.env
+.env.local
+.env.production
+*.env
+
+# ----- Uploads (user data, never commit) -----
+backend/uploads/
+
+# ----- Node.js / Frontend -----
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# ----- IDE / Editor -----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ----- Testing / Coverage -----
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+.mypy_cache/
+
+# ----- Logs -----
+*.log
+
+# ----- OS -----
+Desktop.ini
+ehthumbs.db

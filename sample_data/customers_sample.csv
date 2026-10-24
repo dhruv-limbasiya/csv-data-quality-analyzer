@@ -1,0 +1,13 @@
+id,customer_name,email,age,join_date,annual_income,status
+1,Alice Johnson,alice.johnson@example.com,29,2022-01-15,65000,Active
+2,Bob Smith,bob.smith@example.com,42,2021-06-20,82000,ACTIVE
+3,Charlie Brown,,35,2023-03-10,54000,Pending
+4,Diana Prince,diana.prince@example.com,150,2020-11-05,120000,Active
+5,Evan Wright,evan.wright@example,28,2022-08-14,48000,Inactive
+6,Fiona Gallagher,fiona.g@example.com,31,2023-05-22,61000,Active
+2,Bob Smith,bob.smith@example.com,42,2021-06-20,82000,ACTIVE
+8,George Miller,george.m@example.com,-5,2021-12-01,73000,pending
+9,Hannah Abbott,hannah.abbott@example.com,26,not-a-date,59000,Active
+10,Ian Malcolm,ian.malcolm@example.com,45,2019-07-30,99999999,active
+11,Julia Roberts,julia.r@example.com,38,2022-04-18,,Active
+12,Kevin Bacon,kevin.bacon@example.com,64,2018-09-12,87000,Inactive
