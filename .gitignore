@@ -24,6 +24,7 @@ backend/.venv/
 
 # ----- Uploads (user data, never commit) -----
 backend/uploads/
+backend/cleaned/
 
 # ----- Node.js / Frontend -----
 node_modules/

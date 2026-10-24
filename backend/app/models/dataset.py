@@ -32,6 +32,7 @@ class Dataset(Base):
     # Relationships
     owner = relationship("User", back_populates="datasets")
     analyses = relationship("Analysis", back_populates="dataset", cascade="all, delete-orphan")
+    cleaning_records = relationship("CleaningRecord", back_populates="dataset", cascade="all, delete-orphan")
     
     # Self-referential relationship for cleaned datasets derived from this original
     cleaned_versions = relationship(

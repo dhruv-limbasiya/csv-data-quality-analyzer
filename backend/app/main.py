@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, status
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -24,6 +24,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include routers
+from app.routers.auth import router as auth_router
+from app.routers.datasets import router as datasets_router
+from app.routers.analyses import router as analyses_router
+from app.routers.cleanings import router as cleanings_router
+
+app.include_router(auth_router)
+app.include_router(datasets_router)
+app.include_router(analyses_router)
+app.include_router(cleanings_router)
+
+
+
 
 @app.get("/", tags=["Root"])
 def root():
@@ -37,16 +50,18 @@ def root():
 @app.get("/api/health", tags=["Health"])
 def health_check(db: Session = Depends(get_db)):
     """Health check endpoint that verifies API status and database connectivity."""
-    db_status = "healthy"
     try:
         db.execute(text("SELECT 1"))
     except Exception as exc:
         logger.warning(f"Database health check failed: {exc}")
-        db_status = f"unhealthy: {str(exc)}"
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database health check failed.",
+        ) from exc
 
     return {
-        "status": "ok" if db_status == "healthy" else "degraded",
+        "status": "ok",
         "app": settings.PROJECT_NAME,
         "version": settings.VERSION,
-        "database": db_status
+        "database": "healthy",
     }

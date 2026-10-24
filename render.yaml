@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: csv-data-quality-api
+    runtime: python
+    plan: starter
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    preDeployCommand: alembic upgrade head
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    disk:
+      name: csv-data-files
+      mountPath: /var/data
+      sizeGB: 10
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.13.7"
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: csv-data-quality-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CSRF_SECRET
+        generateValue: true
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: COOKIE_SAMESITE
+        value: lax
+      - key: UPLOAD_DIR
+        value: /var/data/uploads
+      - key: CLEANED_DIR
+        value: /var/data/cleaned
+      - key: MAX_UPLOAD_SIZE_MB
+        value: "50"
+
+databases:
+  - name: csv-data-quality-db
+    plan: basic-256mb
