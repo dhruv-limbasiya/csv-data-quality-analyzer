@@ -80,7 +80,9 @@ api.interceptors.response.use(
     // Standardize error message extraction
     const detail = error.response?.data?.detail;
     let message = 'An unexpected network error occurred.';
-    if (typeof detail === 'string') {
+    if (error.response?.status >= 500) {
+      message = 'The server could not complete your request. Please try again later.';
+    } else if (typeof detail === 'string') {
       message = detail;
     } else if (Array.isArray(detail)) {
       message = detail.map((d) => (d.msg ? `${d.loc ? d.loc.join('.') + ': ' : ''}${d.msg}` : JSON.stringify(d))).join(', ');

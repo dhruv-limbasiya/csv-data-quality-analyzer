@@ -81,6 +81,22 @@ describe('Frontend API Client & Services', () => {
       'Your session has expired or authentication is required. Please log in.'
     );
   });
+
+  it('shows a safe message for server errors without exposing response details', async () => {
+    const errorResponse = {
+      message: 'Request failed with status code 500',
+      response: {
+        status: 500,
+        data: { detail: 'Traceback: internal database error' },
+      },
+    };
+
+    const rejectedHandler = api.interceptors.response.handlers[0].rejected;
+    await expect(rejectedHandler(errorResponse)).rejects.toHaveProperty(
+      'formattedMessage',
+      'The server could not complete your request. Please try again later.'
+    );
+  });
 });
 
 describe('Frontend Service Endpoints', () => {
