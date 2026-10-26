@@ -31,8 +31,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
             plain_password.encode("utf-8"),
             hashed_password.encode("utf-8")
         )
-    except Exception as exc:
-        logger.warning(f"Error checking password hash: {exc}")
+    except Exception:
+        logger.warning("Password hash verification failed.")
         return False
 
 
@@ -61,11 +61,11 @@ def verify_session_token_claims(token: str) -> Optional[Dict[str, Any]]:
         ):
             return None
         return {"user_id": user_id, "session_id": session_id}
-    except (SignatureExpired, BadSignature) as exc:
-        logger.debug(f"Invalid or expired session token: {exc}")
+    except (SignatureExpired, BadSignature):
+        logger.debug("Invalid or expired session token.")
         return None
-    except Exception as exc:
-        logger.warning(f"Unexpected error validating session token: {exc}")
+    except Exception:
+        logger.warning("Unexpected error validating session token.")
         return None
 
 
@@ -96,6 +96,6 @@ def verify_csrf_token(token: str) -> Optional[int]:
         return data.get("user_id")
     except (SignatureExpired, BadSignature):
         return None
-    except Exception as exc:
-        logger.warning(f"Unexpected error validating CSRF token: {exc}")
+    except Exception:
+        logger.warning("Unexpected error validating CSRF token.")
         return None

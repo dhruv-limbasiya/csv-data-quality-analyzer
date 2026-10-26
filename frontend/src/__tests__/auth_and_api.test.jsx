@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import axios from 'axios';
 import api, { getCookie } from '../services/api';
 import { authService } from '../services/authService';
 import { datasetService } from '../services/datasetService';
@@ -26,8 +27,28 @@ describe('Frontend API Client & Services', () => {
     expect(getCookie('nonexistent')).toBeNull();
   });
 
-  it('uses same-origin API requests by default', () => {
-    expect(api.defaults.baseURL).toBe('');
+  it('uses the configured API origin and remains same-origin when unset', () => {
+    expect(api.defaults.baseURL).toBe((import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, ''));
+    expect(api.defaults.withCredentials).toBe(true);
+  });
+
+  it('fetches and attaches the CSRF token when the API cookie is cross-origin and host-only', async () => {
+    Object.defineProperty(document, 'cookie', { writable: true, value: '' });
+    const getSpy = vi.spyOn(axios, 'get').mockResolvedValue({
+      data: { csrf_token: 'signed-csrf-token' },
+    });
+    const requestInterceptor = api.interceptors.request.handlers[0].fulfilled;
+    const config = await requestInterceptor({
+      method: 'post',
+      url: '/api/datasets/8/analyze',
+      headers: {},
+    });
+
+    expect(getSpy).toHaveBeenCalledWith(
+      `${api.defaults.baseURL}/api/auth/csrf`,
+      { withCredentials: true }
+    );
+    expect(config.headers['X-CSRF-Token']).toBe('signed-csrf-token');
   });
 
   it('normalizes FastAPI validation errors in response interceptor', async () => {

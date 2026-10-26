@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import OperationalError
 
 from app.main import app
 from app.config import settings
@@ -114,6 +115,31 @@ def test_registration_duplicate_email(client: TestClient, registered_user: User)
     response = client.post("/api/auth/register", json=payload)
     assert response.status_code == 409
     assert "email address already exists" in response.json()["detail"].lower()
+
+
+def test_registration_rolls_back_user_when_session_creation_fails(db: Session, monkeypatch):
+    """A failed session insert must not leave a user account without a session."""
+    def fail_session_creation(_response, _session, _user_id):
+        raise OperationalError(
+            "INSERT INTO user_sessions",
+            {},
+            RuntimeError("simulated session table failure"),
+        )
+
+    monkeypatch.setattr("app.routers.auth.set_auth_cookies", fail_session_creation)
+    client = TestClient(app, raise_server_exceptions=False)
+    response = client.post(
+        "/api/auth/register",
+        json={
+            "username": "auth_atomic_user",
+            "email": "auth_atomic@example.com",
+            "password": "StrongPassword123!",
+        },
+    )
+
+    assert response.status_code == 500
+    assert response.text == "Internal Server Error"
+    assert db.query(User).filter(User.username == "auth_atomic_user").first() is None
 
 
 def test_registration_input_validation(client: TestClient):
@@ -239,11 +265,20 @@ def test_logout_clears_session(client: TestClient, registered_user: User):
         "password": "StrongPassword123!"
     })
     assert login_res.status_code == 200
+    csrf_token = client.cookies.get(settings.CSRF_COOKIE_NAME)
+    assert csrf_token is not None
     # Verify logged in
     assert client.get("/api/auth/me").status_code == 200
 
+    missing_csrf_res = client.post("/api/auth/logout")
+    assert missing_csrf_res.status_code == 403
+    assert client.get("/api/auth/me").status_code == 200
+
     # Logout
-    logout_res = client.post("/api/auth/logout")
+    logout_res = client.post(
+        "/api/auth/logout",
+        headers={"X-CSRF-Token": csrf_token},
+    )
     assert logout_res.status_code == 200
     assert "Logged out successfully" in logout_res.json()["message"]
 

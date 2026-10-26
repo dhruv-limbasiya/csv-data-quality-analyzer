@@ -151,6 +151,21 @@ def test_duplicate_rows_detection():
         f_path.unlink()
 
 
+def test_analysis_internal_error_does_not_leak_exception(test_setup, monkeypatch):
+    def fail_analysis(*_args, **_kwargs):
+        raise RuntimeError("private-internal-path")
+
+    monkeypatch.setattr("app.routers.analyses.analyze_dataset_quality", fail_analysis)
+    response = test_setup["client_a"].post(
+        f"/api/datasets/{test_setup['dataset_a_id']}/analyze",
+        headers={"X-CSRF-Token": test_setup["csrf_a"]},
+    )
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "Failed to analyze dataset."
+    assert "private-internal-path" not in response.text
+
+
 def test_numerical_and_categorical_statistics():
     """Verify statistical metrics for numeric and categorical columns."""
     with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False) as f:

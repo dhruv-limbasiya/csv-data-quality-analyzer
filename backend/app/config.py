@@ -23,9 +23,15 @@ class Settings(BaseSettings):
     CSRF_COOKIE_NAME: str = "csrf_token"
     COOKIE_SAMESITE: str = "lax"
 
-    MAX_UPLOAD_SIZE_MB: int = 50
+    MAX_UPLOAD_SIZE_MB: int = 5
     UPLOAD_DIR: str = "uploads"
     CLEANED_DIR: str = "cleaned"
+    STORAGE_BACKEND: str = "local"
+    R2_ACCOUNT_ID: str = ""
+    R2_BUCKET: str = ""
+    R2_ACCESS_KEY_ID: str = ""
+    R2_SECRET_ACCESS_KEY: str = ""
+    R2_PRESIGNED_URL_TTL_SECONDS: int = 300
 
     @field_validator("DATABASE_URL", mode="before")
     @classmethod
@@ -46,6 +52,10 @@ class Settings(BaseSettings):
     @property
     def cors_origins(self) -> List[str]:
         return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
+
+    @property
+    def r2_endpoint_url(self) -> str:
+        return f"https://{self.R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
 
     @model_validator(mode="after")
     def validate_production_settings(self):
@@ -81,11 +91,22 @@ class Settings(BaseSettings):
         ):
             raise ValueError("Production ALLOWED_ORIGINS must be one exact HTTPS origin without a path.")
 
-        if self.COOKIE_SAMESITE.lower() != "lax":
-            raise ValueError("Production COOKIE_SAMESITE must be 'lax' when frontend API calls use the same-origin proxy.")
-
-        if not Path(self.UPLOAD_DIR).is_absolute() or not Path(self.CLEANED_DIR).is_absolute():
-            raise ValueError("Production UPLOAD_DIR and CLEANED_DIR must be absolute persistent-storage paths.")
+        if self.STORAGE_BACKEND.lower() == "r2":
+            if not all((self.R2_ACCOUNT_ID, self.R2_BUCKET, self.R2_ACCESS_KEY_ID, self.R2_SECRET_ACCESS_KEY)):
+                raise ValueError("Production R2 storage configuration is incomplete.")
+            if self.COOKIE_SAMESITE.lower() != "none":
+                raise ValueError("Production COOKIE_SAMESITE must be 'none' for separate frontend and API origins.")
+            if self.MAX_UPLOAD_SIZE_MB < 1 or self.MAX_UPLOAD_SIZE_MB > 5:
+                raise ValueError("R2 deployments require MAX_UPLOAD_SIZE_MB between 1 and 5.")
+            if self.R2_PRESIGNED_URL_TTL_SECONDS < 60 or self.R2_PRESIGNED_URL_TTL_SECONDS > 600:
+                raise ValueError("R2_PRESIGNED_URL_TTL_SECONDS must be between 60 and 600 seconds.")
+        elif self.STORAGE_BACKEND.lower() == "local":
+            if not Path(self.UPLOAD_DIR).is_absolute() or not Path(self.CLEANED_DIR).is_absolute():
+                raise ValueError("Production local storage paths must be absolute persistent-storage paths.")
+            if self.COOKIE_SAMESITE.lower() not in {"lax", "none"}:
+                raise ValueError("Production COOKIE_SAMESITE must be 'lax' or 'none'.")
+        else:
+            raise ValueError("STORAGE_BACKEND must be 'r2' or 'local'.")
         return self
 
     @property

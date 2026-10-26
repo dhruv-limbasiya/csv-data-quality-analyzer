@@ -15,6 +15,8 @@ class Dataset(Base):
     stored_filename = Column(String(255), nullable=False, unique=True)
     file_path = Column(String(512), nullable=False)
     file_size_bytes = Column(BigInteger, nullable=False)
+    upload_status = Column(String(20), nullable=False, default="ready", server_default="ready")
+    upload_expires_at = Column(DateTime(timezone=True), nullable=True)
     
     # Dataset statistics
     row_count = Column(Integer, nullable=True)

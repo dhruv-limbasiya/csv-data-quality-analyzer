@@ -1,4 +1,4 @@
-import api, { getCookie } from './api';
+import api from './api';
 
 export const authService = {
   /**

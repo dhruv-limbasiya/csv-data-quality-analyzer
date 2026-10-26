@@ -14,6 +14,7 @@ from app.schemas.analysis import (
     AnalysisListResponse,
 )
 from app.services.quality_service import analyze_dataset_quality
+from app.services.storage import materialize
 
 logger = logging.getLogger("csv_analyzer.analyses")
 
@@ -48,22 +49,20 @@ def run_dataset_analysis(
             detail="Access denied. You do not own this dataset."
         )
 
-    # 3. Verify source file exists on disk
-    file_path = Path(dataset.file_path)
-    if not file_path.exists() or not file_path.is_file():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Source CSV file for dataset {dataset_id} was not found on disk."
-        )
+    if dataset.upload_status != "ready":
+        raise HTTPException(status_code=409, detail="Dataset upload has not been finalized.")
 
-    # 4. Perform analysis without modifying source file
+    # A transient local file is used only during this invocation for R2-backed data.
     try:
-        results = analyze_dataset_quality(file_path, dataset.file_size_bytes)
-    except Exception as exc:
-        logger.error(f"Error analyzing dataset {dataset_id}: {exc}", exc_info=True)
+        with materialize(dataset.file_path) as file_path:
+            results = analyze_dataset_quality(file_path, dataset.file_size_bytes)
+    except HTTPException:
+        raise
+    except Exception:
+        logger.error("Error analyzing dataset id=%s.", dataset_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to analyze dataset: {str(exc)}"
+            detail="Failed to analyze dataset."
         )
 
     # 5. Persist analysis results in PostgreSQL

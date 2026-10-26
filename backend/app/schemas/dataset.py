@@ -38,3 +38,8 @@ class DatasetListResponse(BaseModel):
     items: List[DatasetResponse]
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UploadAuthorizationRequest(BaseModel):
+    filename: str
+    size_bytes: int

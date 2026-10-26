@@ -214,7 +214,11 @@ def test_session_revocation_and_isolation(db: Session):
     captured_session_cookie = client_a.cookies.get(settings.SESSION_COOKIE_NAME)
     assert client_b.get("/api/auth/me").status_code == 200
 
-    logout_res = client_a.post("/api/auth/logout")
+    csrf_token = client_a.cookies.get(settings.CSRF_COOKIE_NAME)
+    logout_res = client_a.post(
+        "/api/auth/logout",
+        headers={"X-CSRF-Token": csrf_token},
+    )
     assert logout_res.status_code == 200
     assert settings.SESSION_COOKIE_NAME not in client_a.cookies
     assert settings.CSRF_COOKIE_NAME not in client_a.cookies

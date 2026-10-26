@@ -388,6 +388,28 @@ def test_apply_cleaning_endpoint_success_and_persist(test_setup, db: Session):
     assert Path(record.output_file_path).exists()
 
 
+def test_apply_cleaning_missing_source_returns_not_found(test_setup, db: Session):
+    client_a = test_setup["client_a"]
+    csrf_a = test_setup["csrf_a"]
+    dataset_id = test_setup["dataset_a_id"]
+    dataset = db.query(Dataset).filter(Dataset.id == dataset_id).first()
+    original_path = dataset.file_path
+    dataset.file_path = str(Path(tempfile.gettempdir()) / "missing-csvqa-test-source.csv")
+    db.commit()
+
+    try:
+        response = client_a.post(
+            f"/api/datasets/{dataset_id}/clean",
+            headers={"X-CSRF-Token": csrf_a},
+            json={"config": {"whitespace_cleaning": {"enabled": True}}},
+        )
+        assert response.status_code == 404
+        assert "not found" in response.json()["detail"].lower()
+    finally:
+        dataset.file_path = original_path
+        db.commit()
+
+
 def test_get_dataset_cleanings_history(test_setup):
     client_a = test_setup["client_a"]
     dataset_id = test_setup["dataset_a_id"]

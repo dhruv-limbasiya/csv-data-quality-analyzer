@@ -7,7 +7,8 @@ import axios from 'axios';
  * - Safe error normalization.
  */
 
-const API_BASE_URL = '';
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+let csrfTokenValue = null;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -33,18 +34,21 @@ api.interceptors.request.use(
     const stateChanging = ['POST', 'PUT', 'DELETE', 'PATCH'];
 
     if (stateChanging.includes(method)) {
-      let csrfToken = getCookie('csrf_token');
-      // Proactively fetch CSRF token if missing on a state-changing operation (excluding public login/register)
-      if (!csrfToken && !config.url?.includes('/api/auth/login') && !config.url?.includes('/api/auth/register')) {
+      let csrfToken = csrfTokenValue || getCookie('csrf_token');
+      const publicAuthRequest = config.url?.includes('/api/auth/login') || config.url?.includes('/api/auth/register');
+      // On separate Vercel projects the API cookie is host-only and not visible
+      // to frontend JavaScript. Keep the response token in memory for CSRF headers.
+      if (!csrfToken && !publicAuthRequest) {
         try {
           const csrfRes = await axios.get(`${API_BASE_URL}/api/auth/csrf`, { withCredentials: true });
-          csrfToken = csrfRes.data?.csrf_token || getCookie('csrf_token');
+          csrfToken = csrfRes.data?.csrf_token || null;
+          csrfTokenValue = csrfToken;
         } catch {
           // If unauthenticated or network error, let request continue and backend respond
         }
       }
 
-      if (csrfToken && !config.headers['X-CSRF-Token']) {
+      if (csrfToken && !publicAuthRequest && !config.headers['X-CSRF-Token']) {
         config.headers['X-CSRF-Token'] = csrfToken;
       }
     }
@@ -55,7 +59,16 @@ api.interceptors.request.use(
 
 // Response Interceptor: Safe error formatting
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (
+      response.config.url?.includes('/api/auth/login') ||
+      response.config.url?.includes('/api/auth/register') ||
+      response.config.url?.includes('/api/auth/logout')
+    ) {
+      csrfTokenValue = null;
+    }
+    return response;
+  },
   (error) => {
     // If response is a blob (e.g. failed file download returning JSON error as blob), parse it
     if (error.response?.data instanceof Blob && error.response.data.type?.includes('application/json')) {

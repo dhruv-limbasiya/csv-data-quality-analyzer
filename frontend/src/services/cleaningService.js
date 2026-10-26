@@ -50,6 +50,16 @@ export const cleaningService = {
       responseType: 'blob',
     });
 
+    // Production R2 downloads are short-lived, owner-authorized URLs so large
+    // outputs bypass the serverless function response-size limit.
+    if (res.data instanceof Blob && res.data.type?.includes('application/json')) {
+      const payload = JSON.parse(await res.data.text());
+      if (payload.download_url) {
+        window.location.assign(payload.download_url);
+        return true;
+      }
+    }
+
     // Extract filename from Content-Disposition header if available
     let filename = fallbackFilename;
     const disposition = res.headers['content-disposition'];

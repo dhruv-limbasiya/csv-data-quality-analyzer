@@ -1,12 +1,13 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Settings,
   Shield,
   LogOut,
 } from 'lucide-react';
 import { Card, Button, Badge, PageHeader, FormField } from '../components/common/UI';
 import { useAuth } from '../context/AuthContext';
+
+const MAX_UPLOAD_SIZE_MB = Math.max(1, Math.min(5, Number(import.meta.env.VITE_MAX_UPLOAD_SIZE_MB) || 5));
 
 export default function SettingsPage() {
   const navigate = useNavigate();
@@ -79,7 +80,7 @@ export default function SettingsPage() {
               <div>
                 <p className="text-xs font-semibold text-slate-900">Session Cookie Protection</p>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Authenticated via HttpOnly, SameSite=Lax cookie with active CSRF token protection.
+                  Authenticated with an HttpOnly session cookie and active CSRF token protection.
                 </p>
               </div>
             </div>
@@ -124,7 +125,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <p className="text-slate-400 font-medium">Upload File Limit</p>
-            <p className="font-semibold text-slate-900 mt-0.5">50 MB</p>
+            <p className="font-semibold text-slate-900 mt-0.5">{MAX_UPLOAD_SIZE_MB} MB</p>
           </div>
           <div>
             <p className="text-slate-400 font-medium">Phase Status</p>

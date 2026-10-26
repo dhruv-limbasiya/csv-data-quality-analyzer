@@ -1,0 +1,7 @@
+# Local development, migrations, and tests. Vercel installs requirements.txt only.
+-r requirements.txt
+uvicorn[standard]==0.34.2
+alembic==1.15.2
+pytest==8.3.5
+httpx==0.28.1
+pytest-asyncio==0.26.0

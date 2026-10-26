@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Database,
@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { Card, Button, Badge, PageHeader, EmptyState } from '../components/common/UI';
 import { datasetService } from '../services/datasetService';
+
+const MAX_UPLOAD_SIZE_MB = Math.max(1, Math.min(5, Number(import.meta.env.VITE_MAX_UPLOAD_SIZE_MB) || 5));
 
 export default function DatasetsPage() {
   const navigate = useNavigate();
@@ -31,6 +33,7 @@ export default function DatasetsPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const uploadController = useRef(null);
 
   const fetchDatasets = useCallback(async () => {
     setIsLoading(true);
@@ -62,8 +65,8 @@ export default function DatasetsPage() {
       setUploadFile(null);
       return;
     }
-    if (file.size > 50 * 1024 * 1024) {
-      setUploadError('File exceeds maximum upload size of 50 MB.');
+    if (file.size > MAX_UPLOAD_SIZE_MB * 1024 * 1024) {
+      setUploadError(`File exceeds maximum upload size of ${MAX_UPLOAD_SIZE_MB} MB.`);
       setUploadFile(null);
       return;
     }
@@ -78,13 +81,14 @@ export default function DatasetsPage() {
     }
 
     setIsUploading(true);
+    uploadController.current = new AbortController();
     setUploadProgress(0);
     setUploadError(null);
 
     try {
       await datasetService.uploadDataset(uploadFile, (progress) => {
         setUploadProgress(progress);
-      });
+      }, { signal: uploadController.current.signal });
       setUploadSuccess(true);
       setUploadFile(null);
       await fetchDatasets();
@@ -94,8 +98,11 @@ export default function DatasetsPage() {
         setUploadProgress(0);
       }, 1000);
     } catch (err) {
-      setUploadError(err.formattedMessage || 'Failed to upload CSV dataset.');
+      setUploadError(err.name === 'CanceledError' || err.name === 'AbortError'
+        ? 'Upload canceled.'
+        : (err.formattedMessage || 'Failed to upload CSV dataset.'));
     } finally {
+      uploadController.current = null;
       setIsUploading(false);
     }
   };
@@ -295,7 +302,7 @@ export default function DatasetsPage() {
           <div className="bg-white rounded-xl shadow-xl border border-slate-200 max-w-md w-full p-6">
             <h3 className="text-lg font-bold text-slate-900">Upload CSV Dataset</h3>
             <p className="text-xs text-slate-500 mt-1 mb-4">
-              Select a valid UTF-8 CSV file up to 50 MB in size.
+              Select a valid UTF-8 CSV file up to {MAX_UPLOAD_SIZE_MB} MB in size.
             </p>
 
             <form onSubmit={handleUploadSubmit} className="space-y-4">
@@ -326,14 +333,14 @@ export default function DatasetsPage() {
                   {uploadFile ? uploadFile.name : 'Click to select CSV file'}
                 </p>
                 <p className="text-xs text-slate-400 mt-1">
-                  {uploadFile ? `${(uploadFile.size / 1024).toFixed(1)} KB` : 'Max size 50 MB'}
+                  {uploadFile ? `${(uploadFile.size / 1024).toFixed(1)} KB` : `Max size ${MAX_UPLOAD_SIZE_MB} MB`}
                 </p>
               </label>
 
               {isUploading && (
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs text-slate-500 font-medium">
-                    <span>Uploading and parsing...</span>
+                    <span>Uploading securely and parsing...</span>
                     <span>{uploadProgress}%</span>
                   </div>
                   <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -349,10 +356,12 @@ export default function DatasetsPage() {
                 <Button
                   type="button"
                   variant="ghost"
-                  onClick={() => setShowUploadModal(false)}
-                  disabled={isUploading}
+                  onClick={() => {
+                    if (isUploading) uploadController.current?.abort();
+                    else setShowUploadModal(false);
+                  }}
                 >
-                  Cancel
+                  {isUploading ? 'Cancel upload' : 'Cancel'}
                 </Button>
                 <Button
                   type="submit"
@@ -360,7 +369,7 @@ export default function DatasetsPage() {
                   isLoading={isUploading}
                   disabled={!uploadFile || isUploading}
                 >
-                  Upload & Parse
+                  Upload & Analyze
                 </Button>
               </div>
             </form>

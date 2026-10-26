@@ -63,13 +63,13 @@ def register_user(
         is_active=True,
     )
     db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    logger.info(f"Registered new user: id={new_user.id}, username='{new_user.username}'")
+    db.flush()
 
     # 4. Automatically establish session with HttpOnly and CSRF cookies
     set_auth_cookies(response, db, new_user.id)
+    db.commit()
+    db.refresh(new_user)
+    logger.info("Registered new user id=%s.", new_user.id)
 
     return UserResponse.model_validate(new_user)
 
@@ -112,7 +112,8 @@ def login_user(
 
     # Set session and CSRF cookies
     set_auth_cookies(response, db, user.id)
-    logger.info(f"User logged in: id={user.id}, username='{user.username}'")
+    db.commit()
+    logger.info("User logged in id=%s.", user.id)
 
     return UserResponse.model_validate(user)
 

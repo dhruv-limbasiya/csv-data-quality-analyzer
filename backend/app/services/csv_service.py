@@ -31,12 +31,17 @@ def sanitize_filename(filename: Optional[str]) -> str:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No filename provided in upload."
         )
-    # Extract only the base name
-    clean_name = Path(filename).name.strip()
+    # Normalize Windows and POSIX separators regardless of the host OS.
+    clean_name = filename.replace("\\", "/").split("/")[-1].strip()
     if not clean_name or clean_name in (".", ".."):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid filename."
+        )
+    if len(clean_name) > 255 or any(ord(char) < 32 for char in clean_name):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid filename.",
         )
     return clean_name
 
@@ -167,10 +172,10 @@ def parse_and_extract_metadata(file_path: Path) -> Tuple[int, int, List[Dict[str
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="CSV file contains no data or headers."
         )
-    except Exception as exc:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Malformed CSV file: {str(exc)}"
+            detail="Malformed CSV file."
         )
 
     # Validate that we have columns

@@ -247,7 +247,10 @@ def test_complete_e2e_workflow(db: Session):
     assert "CSRF" in csrf_fail_res.json()["detail"]
 
     # 12. Log out User A
-    logout_res = client.post("/api/auth/logout")
+    logout_res = client.post(
+        "/api/auth/logout",
+        headers={"X-CSRF-Token": csrf_token_a},
+    )
     assert logout_res.status_code == 200
 
     # 13. Verify protected pages / endpoints require authentication after logout

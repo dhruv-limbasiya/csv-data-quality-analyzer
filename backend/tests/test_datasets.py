@@ -112,6 +112,21 @@ def test_unauthenticated_list_rejected(unauth_client):
     assert response.status_code == 401
 
 
+def test_upload_internal_error_does_not_leak_exception(auth_client, monkeypatch):
+    def fail_upload(_upload):
+        raise RuntimeError("private-storage-path")
+
+    monkeypatch.setattr("app.routers.datasets.save_upload_stream", fail_upload)
+    response = auth_client.post(
+        "/api/datasets/upload",
+        files={"file": ("data.csv", b"id\n1", "text/csv")},
+    )
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "An error occurred while processing the uploaded file."
+    assert "private-storage-path" not in response.text
+
+
 def test_cross_user_dataset_access_forbidden(auth_client, second_user, db_session, temp_upload_dir):
     """Verify a user cannot retrieve another user's dataset (returns 403)."""
     # Create a dataset directly for second_user
@@ -319,6 +334,28 @@ def test_get_nonexistent_dataset(auth_client):
     assert response.status_code == 404
 
 
+def test_get_dataset_surfaces_missing_storage_file(auth_client, db_session, test_user, temp_upload_dir):
+    """A missing stored CSV must not be reported as a successful empty preview."""
+    dataset = Dataset(
+        user_id=test_user.id,
+        original_filename="missing.csv",
+        stored_filename=f"missing-{test_user.id}.csv",
+        file_path=str(temp_upload_dir / "missing.csv"),
+        file_size_bytes=1,
+    )
+    db_session.add(dataset)
+    db_session.commit()
+    db_session.refresh(dataset)
+
+    try:
+        response = auth_client.get(f"/api/datasets/{dataset.id}")
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Source dataset file was not found on disk."
+    finally:
+        db_session.delete(dataset)
+        db_session.commit()
+
+
 def test_database_failure_cleans_up_file(auth_client, temp_upload_dir):
     """Verify that if database persistence fails, the uploaded file is cleaned up."""
     csv_content = b"a,b\n1,2"
@@ -328,9 +365,9 @@ def test_database_failure_cleans_up_file(auth_client, temp_upload_dir):
             files={"file": ("fail_cleanup.csv", csv_content, "text/csv")},
         )
         assert response.status_code == 500
-        assert "Simulated DB Crash" in response.json()["detail"]
+        assert response.json()["detail"] == "An error occurred while processing the uploaded file."
+        assert "Simulated DB Crash" not in response.text
 
     # Verify no leaked files in upload directory
     remaining_files = list(temp_upload_dir.glob("*.csv"))
     assert len(remaining_files) == 0
-

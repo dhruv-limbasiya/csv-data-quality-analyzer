@@ -4,7 +4,7 @@ services:
     runtime: python
     plan: starter
     rootDir: backend
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements-dev.txt
     preDeployCommand: alembic upgrade head
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
@@ -28,13 +28,15 @@ services:
       - key: ALLOWED_ORIGINS
         sync: false
       - key: COOKIE_SAMESITE
-        value: lax
+        value: none
+      - key: STORAGE_BACKEND
+        value: local
       - key: UPLOAD_DIR
         value: /var/data/uploads
       - key: CLEANED_DIR
         value: /var/data/cleaned
       - key: MAX_UPLOAD_SIZE_MB
-        value: "50"
+        value: "5"
 
 databases:
   - name: csv-data-quality-db

@@ -34,7 +34,7 @@ def set_csrf_cookie(response: Response, token: str) -> None:
 
 
 def set_auth_cookies(response: Response, db: Session, user_id: int) -> None:
-    """Persist a server-side session before issuing its authentication cookies."""
+    """Stage a server-side session before issuing its authentication cookies."""
     session_id = uuid4().hex
     token = create_session_token(user_id, session_id)
     now = datetime.now(timezone.utc)
@@ -45,7 +45,7 @@ def set_auth_cookies(response: Response, db: Session, user_id: int) -> None:
         is_revoked=False,
         expires_at=now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
     ))
-    db.commit()
+    db.flush()
     response.set_cookie(
         key=settings.SESSION_COOKIE_NAME,
         value=token,
@@ -149,7 +149,7 @@ async def get_current_user(
     except HTTPException:
         raise
     except SQLAlchemyError as exc:
-        logger.exception("Database error while validating an authentication session: %s", exc)
+        logger.error("Database error while validating an authentication session.")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Authentication could not be verified. Please try again later.",
@@ -164,8 +164,8 @@ async def get_current_user(
 
     # 4. CSRF Protection for state-changing cookie requests
     if is_cookie_auth and request.method in STATE_CHANGING_METHODS:
-        # Exclude public auth endpoints that don't need CSRF before login
-        if request.url.path not in ("/api/auth/login", "/api/auth/register", "/api/auth/logout"):
+        # Public login and registration do not have an authenticated CSRF token yet.
+        if request.url.path not in ("/api/auth/login", "/api/auth/register"):
             csrf_header = request.headers.get("X-CSRF-Token") or request.headers.get("x-csrf-token")
             csrf_cookie = request.cookies.get(settings.CSRF_COOKIE_NAME)
 
