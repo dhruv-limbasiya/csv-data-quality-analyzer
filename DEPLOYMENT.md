@@ -40,18 +40,17 @@ Browser ── frontend origin ──> Vercel static React/Vite project
 
 ## Temporary presentation demo mode
 
-Demo mode is **off by default**. Enable both flags only when intentionally preparing a presentation:
+The public, browser-only presentation mode is **off by default** and uses synthetic fixtures; it does not create an account or call protected API routes.
 
-- Backend: `DEMO_MODE=true`
-- Frontend build: `VITE_DEMO_MODE=true`
+- Frontend build: `VITE_PUBLIC_DEMO_MODE=true`
 
-For local development, set `DEMO_MODE=true` in `backend\.env`, set `VITE_DEMO_MODE=true` in `frontend\.env.local`, then restart FastAPI and Vite. Remove either setting or set it to `false` to disable its side; normal authenticated behavior resumes when the backend flag is false.
+For local development, set `VITE_PUBLIC_DEMO_MODE=true` in `frontend\.env.local` and restart Vite. For Vercel, set this variable on the frontend build environment (or the combined root project when using root `vercel.json`) for the intended environment, then redeploy the frontend. To disable public presentation mode, remove the variable or set it to `false` and rebuild/redeploy the frontend.
 
-For Vercel, set `DEMO_MODE=true` in the backend project's environment and `VITE_DEMO_MODE=true` in the frontend project's environment, then redeploy both projects so the backend runtime and Vite build use matching flags. Disable by setting both to `false` (or removing them) and redeploying both. Do not place secrets in `VITE_*` variables; Vite exposes them to every browser.
+No backend demo flag or database credentials are needed for this browser-only experience. The backend's existing authentication and ownership checks remain unchanged; keep backend `DEMO_MODE=false` for normal authenticated API environments. `VITE_DEMO_MODE` is a separate, cookie-backed demo-account mechanism and is not required for public presentation mode.
 
-The frontend creates a demo session automatically. The API creates a separate random user for each new unauthenticated browser session; the resulting HTTP-only session uses the normal CSRF checks and ownership checks. Datasets are not shared across demo accounts. The backend login and registration endpoints return 404 while demo mode is enabled. No migration or hardcoded credential is required.
+Dashboard, dataset listing, illustrative quality results, and cleaning history use bundled fictional sample data. Supported cleaning examples run in browser memory; generated sample CSVs are downloaded locally. Public demo state is not persisted and is discarded on reload. CSV uploads and real backend mutations are disabled. Type conversion/outlier operations that are not simulated return an explanation rather than calling the API. No migration, database, or file-storage setup is required to browse the public demo.
 
-**Security warning:** demo mode is a public feature, not an access-control boundary. Visitors can create demo accounts and consume database, function, and object-storage resources. Use only a separate demo database/storage account containing non-sensitive sample data. Do not enable it against production user data unless you explicitly accept the exposure and abuse risks. This change does not enable the flag in any deployment.
+**Security warning:** every frontend `VITE_*` value is public and the bundled fixtures can be inspected or copied by visitors. Only fictional sample data belongs in these fixtures. This mode does not authorize or expose backend user records; it keeps visitors out of the database and storage paths.
 
 ## 2. Important limits and workload fit
 
