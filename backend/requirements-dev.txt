@@ -1,4 +1,5 @@
-# Local development, migrations, and tests. Vercel installs requirements.txt only.
+# Local development, migrations, and tests. Runtime dependencies are in
+# pyproject.toml and mirrored in requirements.txt.
 -r requirements.txt
 uvicorn[standard]==0.34.2
 alembic==1.15.2

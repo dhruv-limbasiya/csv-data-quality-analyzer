@@ -2,6 +2,21 @@
 name = "csv-data-quality-analyzer-api"
 version = "1.0.0"
 requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi==0.115.12",
+    "sqlalchemy==2.0.41",
+    "psycopg2-binary==2.9.10",
+    "pandas==2.2.3",
+    "numpy==2.2.5",
+    "pydantic==2.11.3",
+    "pydantic-settings==2.9.1",
+    "passlib[bcrypt]==1.7.4",
+    "python-jose[cryptography]==3.5.0",
+    "python-multipart==0.0.20",
+    "python-dotenv==1.1.0",
+    "itsdangerous==2.2.0",
+    "boto3==1.38.23",
+]
 
 [tool.vercel]
 entrypoint = "app.main:app"

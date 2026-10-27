@@ -1,4 +1,4 @@
-# Runtime dependencies for Vercel Functions and the API.
+# Runtime dependency mirror for pip installs; keep in sync with pyproject.toml.
 fastapi==0.115.12
 sqlalchemy==2.0.41
 psycopg2-binary==2.9.10
