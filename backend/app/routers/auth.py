@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 import logging
+import secrets
 
+from app.config import settings
 from app.database import get_db
 from app.models.user import User
 from app.auth import (
@@ -38,6 +41,12 @@ def register_user(
     db: Session = Depends(get_db),
 ):
     """Register a new user account and automatically establish a session."""
+    if settings.DEMO_MODE:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Registration is disabled in demo mode.",
+        )
+
     # 1. Enforce unique username
     existing_username = db.query(User).filter(User.username == payload.username).first()
     if existing_username:
@@ -87,14 +96,27 @@ def login_user(
     db: Session = Depends(get_db),
 ):
     """Authenticate user credentials and issue secure session cookies."""
+    if settings.DEMO_MODE:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Login is disabled in demo mode.",
+        )
+
     identifier = payload.username_or_email.strip()
 
     # Find user by username or email
-    user = (
-        db.query(User)
-        .filter(or_(User.username == identifier, User.email == identifier.lower()))
-        .first()
-    )
+    try:
+        user = (
+            db.query(User)
+            .filter(or_(User.username == identifier, User.email == identifier.lower()))
+            .first()
+        )
+    except SQLAlchemyError as exc:
+        logger.error("Database error during login.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication is temporarily unavailable. Please try again later.",
+        ) from exc
 
     # Constant-time verification to prevent user enumeration via timing
     if not user or not verify_password(payload.password, user.hashed_password):
@@ -111,11 +133,70 @@ def login_user(
         )
 
     # Set session and CSRF cookies
-    set_auth_cookies(response, db, user.id)
-    db.commit()
+    try:
+        set_auth_cookies(response, db, user.id)
+        db.commit()
+    except SQLAlchemyError as exc:
+        try:
+            db.rollback()
+        except SQLAlchemyError:
+            logger.error("Database rollback failed after a login error.")
+        logger.error("Database error while creating a login session.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication is temporarily unavailable. Please try again later.",
+        ) from exc
     logger.info("User logged in id=%s.", user.id)
 
     return UserResponse.model_validate(user)
+
+
+@router.post(
+    "/demo",
+    response_model=UserResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Start an isolated demo session",
+)
+def create_demo_session(
+    response: Response,
+    db: Session = Depends(get_db),
+):
+    """Create a dedicated, password-inaccessible account for one demo session."""
+    if not settings.DEMO_MODE:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Demo mode is disabled.",
+        )
+
+    identity = secrets.token_hex(16)
+    demo_user = User(
+        username=f"demo_{identity}",
+        email=f"demo-{identity}@example.com",
+        hashed_password=hash_password(secrets.token_urlsafe(32)),
+        is_active=True,
+    )
+    try:
+        db.add(demo_user)
+        db.flush()
+        set_auth_cookies(response, db, demo_user.id)
+        db.commit()
+        db.refresh(demo_user)
+    except IntegrityError as exc:
+        db.rollback()
+        logger.error("Database uniqueness error while creating a demo session.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="A demo session could not be started. Please try again.",
+        ) from exc
+    except SQLAlchemyError as exc:
+        db.rollback()
+        logger.error("Database error while creating a demo session.")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="A demo session could not be started. Please try again.",
+        ) from exc
+
+    return UserResponse.model_validate(demo_user)
 
 
 @router.post(

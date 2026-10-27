@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "CSV Data Quality Analyzer"
     VERSION: str = "1.0.0"
     ENVIRONMENT: str = "development"
+    DEMO_MODE: bool = False
 
     DATABASE_URL: str
 

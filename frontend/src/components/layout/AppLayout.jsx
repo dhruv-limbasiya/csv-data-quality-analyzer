@@ -29,7 +29,7 @@ export default function AppLayout({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isDemoMode } = useAuth();
 
   const currentNav = NAV_ITEMS.find((item) => item.path === location.pathname) || {
     name: 'Dashboard',
@@ -89,13 +89,15 @@ export default function AppLayout({ children }) {
               <p className="text-xs font-semibold text-slate-200 truncate">{user?.username || 'User'}</p>
               <p className="text-[11px] text-slate-500 truncate">{user?.email || 'Authenticated'}</p>
             </div>
-            <button
-              onClick={handleLogout}
-              title="Sign Out"
-              className="p-1.5 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors cursor-pointer"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            {!isDemoMode && (
+              <button
+                onClick={handleLogout}
+                title="Sign Out"
+                className="p-1.5 rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </aside>
@@ -151,16 +153,18 @@ export default function AppLayout({ children }) {
                 <p className="text-xs font-semibold text-slate-200">{user?.username}</p>
                 <p className="text-[11px] text-slate-500">{user?.email}</p>
               </div>
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  handleLogout();
-                }}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-                Sign Out
-              </button>
+              {!isDemoMode && (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700 cursor-pointer"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Sign Out
+                </button>
+              )}
             </div>
           </div>
         </div>

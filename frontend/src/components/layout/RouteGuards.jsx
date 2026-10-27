@@ -6,7 +6,7 @@ import { useAuth } from '../../context/AuthContext';
  * Route wrapper that redirects unauthenticated users to /login
  */
 export function ProtectedRoute({ children }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isDemoMode, authError } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -23,7 +23,17 @@ export function ProtectedRoute({ children }) {
     );
   }
 
-  if (!isAuthenticated) {
+  if (isDemoMode && authError && !isAuthenticated) {
+    return (
+      <div role="alert" className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center">
+        <p className="max-w-lg text-sm text-slate-600">
+          Demo access could not be started. Confirm that demo mode is enabled on both the frontend and API, and that the API database is available.
+        </p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated && !isDemoMode) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
@@ -34,13 +44,13 @@ export function ProtectedRoute({ children }) {
  * Route wrapper that redirects authenticated users away from /login and /register
  */
 export function PublicOnlyRoute({ children }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isDemoMode } = useAuth();
 
   if (isLoading) {
     return null;
   }
 
-  if (isAuthenticated) {
+  if (isAuthenticated || isDemoMode) {
     return <Navigate to="/dashboard" replace />;
   }
 

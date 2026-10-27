@@ -2,18 +2,30 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { authService } from '../services/authService';
 
 const AuthContext = createContext(null);
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState(false);
 
   // Check current session with the backend on app mount
   const checkAuth = useCallback(async () => {
     try {
-      const userData = await authService.getProfile();
+      let userData;
+      try {
+        userData = await authService.getProfile();
+      } catch (error) {
+        if (!DEMO_MODE || error.response?.status !== 401) {
+          throw error;
+        }
+        userData = await authService.createDemoSession();
+      }
       setUser(userData);
+      setAuthError(false);
     } catch {
       setUser(null);
+      setAuthError(true);
     } finally {
       setIsLoading(false);
     }
@@ -26,12 +38,14 @@ export function AuthProvider({ children }) {
   const login = async (credentials) => {
     const userData = await authService.login(credentials);
     setUser(userData);
+    setAuthError(false);
     return userData;
   };
 
   const register = async (data) => {
     const userData = await authService.register(data);
     setUser(userData);
+    setAuthError(false);
     return userData;
   };
 
@@ -49,6 +63,8 @@ export function AuthProvider({ children }) {
         user,
         isLoading,
         isAuthenticated: !!user,
+        isDemoMode: DEMO_MODE,
+        authError,
         login,
         register,
         logout,

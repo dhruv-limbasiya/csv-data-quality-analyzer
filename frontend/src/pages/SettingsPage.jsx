@@ -11,7 +11,7 @@ const MAX_UPLOAD_SIZE_MB = Math.max(1, Math.min(5, Number(import.meta.env.VITE_M
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isDemoMode } = useAuth();
 
   const handleLogout = async () => {
     await logout();
@@ -72,7 +72,10 @@ export default function SettingsPage() {
       </Card>
 
       {/* Security & Authentication */}
-      <Card title="Security & Authentication" subtitle="Session security parameters and active cookie state">
+      <Card
+        title={isDemoMode ? 'Presentation Session' : 'Security & Authentication'}
+        subtitle={isDemoMode ? 'This isolated demo account is temporary and presentation-only.' : 'Session security parameters and active cookie state'}
+      >
         <div className="space-y-4">
           <div className="p-3.5 bg-slate-50 rounded-lg flex items-start justify-between gap-4">
             <div className="flex items-start gap-3">
@@ -87,20 +90,22 @@ export default function SettingsPage() {
             <Badge variant="success">Secured</Badge>
           </div>
 
-          <div className="flex items-center justify-between pt-2">
-            <div>
-              <p className="text-xs font-semibold text-slate-800">Sign Out of Session</p>
-              <p className="text-xs text-slate-500">Revoke your cookie session on the server.</p>
+          {!isDemoMode && (
+            <div className="flex items-center justify-between pt-2">
+              <div>
+                <p className="text-xs font-semibold text-slate-800">Sign Out of Session</p>
+                <p className="text-xs text-slate-500">Revoke your cookie session on the server.</p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={LogOut}
+                onClick={handleLogout}
+              >
+                Sign Out
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              icon={LogOut}
-              onClick={handleLogout}
-            >
-              Sign Out
-            </Button>
-          </div>
+          )}
         </div>
       </Card>
 

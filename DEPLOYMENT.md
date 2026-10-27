@@ -2,6 +2,21 @@
 
 **Preparation only. No provider resources were created, account settings changed, migration run against a provider database, deployment performed, or production data tested.** Follow the steps below in a staging environment before opening the application to real users.
 
+## Reported production 500s: diagnosis and recovery
+
+The public, unauthenticated `GET /api/auth/me` and `GET /api/health` were checked on 2026-10-27 and both returned HTTP 500. No Vercel project access, runtime logs, environment values, or database access were available, so the exact production exception and deployment configuration cannot be established here. No authenticated login request was sent. The unauthenticated `/api/auth/me` path should return 401 before querying the database; its 500 therefore points first to a function import/startup failure or a request routed to something other than the expected FastAPI app, rather than to a bad username/password.
+
+Repository-specific checks:
+
+- The root `vercel.json` is a **single Vercel Services project** configuration: `/api` and `/api/...` are routed to its `backend` service, and other paths to `frontend`. This route is valid only when deploying the repository root as the combined project.
+- For the two-project setup described below, set the backend project's Root Directory to `backend` and the frontend project's Root Directory to `frontend`. The frontend's own `vercel.json` intentionally does **not** proxy `/api`; its production build must have `VITE_API_BASE_URL` set to the backend HTTPS origin. If this variable is omitted or points to the wrong host, API requests can reach the static frontend and return 404. The root Services config and independent project setup are alternatives; do not combine their assumptions.
+- `app.config` constructs `Settings` at import time and requires `DATABASE_URL`, `SECRET_KEY`, and `CSRF_SECRET`. Missing/invalid values prevent the FastAPI module from loading and can surface as 500s for every backend route. A valid import does not prove database connectivity or that migrations are current.
+- `GET /api/auth/me` with no session should return 401 without database access. With a session, it reads `user_sessions` and the user record. Login queries the user table and writes a server-side session; if the database is unavailable or the existing Alembic chain is not applied, login can fail during either operation. Login now returns a generic 503 for SQLAlchemy failures rather than an unhandled 500; this does not repair connectivity/schema problems.
+
+To identify the deployed cause, an operator with authorized Vercel access should inspect the **Function Logs** for the backend deployment at the timestamps of the 500 responses and provide only the exception type, failing module/file and line, and sanitized SQLAlchemy error class/message (remove hostnames, usernames, database names, URLs, query parameters, and all values). The decisive signals are: settings/Pydantic validation at import (check required variable *presence*, not values); module/dependency import failure; `OperationalError`/connection or TLS/allowlist failure; or undefined table/column indicating migration drift. Also verify the actual project's Root Directory and deployed commit, and for separate projects confirm that the built frontend's public `VITE_API_BASE_URL` matches the backend origin and the backend `ALLOWED_ORIGINS` matches the exact frontend origin. Do not copy environment values, presigned URLs, cookies, or full connection strings into tickets or chat.
+
+After correcting only the confirmed issue, deploy a Preview with isolated resources first. Check `/api/health` (200, database healthy), unauthenticated `/api/auth/me` (401), and then perform registration, duplicate registration, login, authenticated `/me`, logout/revocation using a disposable account. If the traceback indicates schema drift, inspect Alembic current/history and use the controlled, backed-up migration procedure in section 7; never migrate production automatically or use destructive schema commands. No deployment or production change was made during this investigation.
+
 ## 1. Deployment architecture and request/data flow
 
 Create two independent Vercel projects from this repository:
@@ -22,6 +37,21 @@ Browser ── frontend origin ──> Vercel static React/Vite project
 - Upload authorization reserves a user-owned pending database row and returns a short-lived PUT URL for a unique private staging key. Finalization checks owner, expiry, reported and actual size, object metadata/ETag, parses the CSV, then conditionally promotes the exact verified staging object. It is designed to return the already-finalized dataset on repeated completion. A cancel route is provided. Missing objects, invalid CSVs, provider failures, and expired requests return errors rather than a ready dataset.
 - Original CSV and permanent cleaned output objects remain private in R2. The API issues a short-lived download URL only after ownership checks. Where formula-safe output is needed for export, the generated downloadable copy is stored under `exports/`; this is temporary and should be removed by lifecycle rules.
 - Local temporary files are used only during a single API operation to let the current Pandas code read/write files; they are removed and are not persistent storage. The existing quality-analysis and cleaning pipeline is retained and original files are not overwritten.
+
+## Temporary presentation demo mode
+
+Demo mode is **off by default**. Enable both flags only when intentionally preparing a presentation:
+
+- Backend: `DEMO_MODE=true`
+- Frontend build: `VITE_DEMO_MODE=true`
+
+For local development, set `DEMO_MODE=true` in `backend\.env`, set `VITE_DEMO_MODE=true` in `frontend\.env.local`, then restart FastAPI and Vite. Remove either setting or set it to `false` to disable its side; normal authenticated behavior resumes when the backend flag is false.
+
+For Vercel, set `DEMO_MODE=true` in the backend project's environment and `VITE_DEMO_MODE=true` in the frontend project's environment, then redeploy both projects so the backend runtime and Vite build use matching flags. Disable by setting both to `false` (or removing them) and redeploying both. Do not place secrets in `VITE_*` variables; Vite exposes them to every browser.
+
+The frontend creates a demo session automatically. The API creates a separate random user for each new unauthenticated browser session; the resulting HTTP-only session uses the normal CSRF checks and ownership checks. Datasets are not shared across demo accounts. The backend login and registration endpoints return 404 while demo mode is enabled. No migration or hardcoded credential is required.
+
+**Security warning:** demo mode is a public feature, not an access-control boundary. Visitors can create demo accounts and consume database, function, and object-storage resources. Use only a separate demo database/storage account containing non-sensitive sample data. Do not enable it against production user data unless you explicitly accept the exposure and abuse risks. This change does not enable the flag in any deployment.
 
 ## 2. Important limits and workload fit
 

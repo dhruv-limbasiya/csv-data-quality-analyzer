@@ -35,7 +35,7 @@ api.interceptors.request.use(
 
     if (stateChanging.includes(method)) {
       let csrfToken = csrfTokenValue || getCookie('csrf_token');
-      const publicAuthRequest = config.url?.includes('/api/auth/login') || config.url?.includes('/api/auth/register');
+      const publicAuthRequest = config.url?.includes('/api/auth/login') || config.url?.includes('/api/auth/register') || config.url?.includes('/api/auth/demo');
       // On separate Vercel projects the API cookie is host-only and not visible
       // to frontend JavaScript. Keep the response token in memory for CSRF headers.
       if (!csrfToken && !publicAuthRequest) {
@@ -63,6 +63,7 @@ api.interceptors.response.use(
     if (
       response.config.url?.includes('/api/auth/login') ||
       response.config.url?.includes('/api/auth/register') ||
+      response.config.url?.includes('/api/auth/demo') ||
       response.config.url?.includes('/api/auth/logout')
     ) {
       csrfTokenValue = null;

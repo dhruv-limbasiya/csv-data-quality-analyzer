@@ -128,6 +128,9 @@ describe('Frontend Service Endpoints', () => {
     await authService.login({ username_or_email: 'testuser', password: 'password123' });
     expect(postSpy).toHaveBeenCalledWith('/api/auth/login', { username_or_email: 'testuser', password: 'password123' });
 
+    await authService.createDemoSession();
+    expect(postSpy).toHaveBeenCalledWith('/api/auth/demo');
+
     await authService.getProfile();
     expect(getSpy).toHaveBeenCalledWith('/api/auth/me');
 

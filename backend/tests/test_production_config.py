@@ -13,6 +13,10 @@ def production_settings(**overrides):
         "ALLOWED_ORIGINS": "https://analyzer.example.com",
         "COOKIE_SAMESITE": "none",
         "STORAGE_BACKEND": "r2",
+        # Keep test cases deterministic when the caller has local storage
+        # directories configured in its environment.
+        "UPLOAD_DIR": "uploads",
+        "CLEANED_DIR": "cleaned",
         "R2_ACCOUNT_ID": "example-account",
         "R2_BUCKET": "analyzer-test",
         "R2_ACCESS_KEY_ID": "placeholder-access",

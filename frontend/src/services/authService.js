@@ -20,6 +20,14 @@ export const authService = {
   },
 
   /**
+   * Start an isolated presentation session when demo mode is enabled.
+   */
+  async createDemoSession() {
+    const res = await api.post('/api/auth/demo');
+    return res.data;
+  },
+
+  /**
    * Log out user and clear cookies
    */
   async logout() {
