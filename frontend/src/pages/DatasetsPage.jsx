@@ -13,11 +13,13 @@ import {
 } from 'lucide-react';
 import { Card, Button, Badge, PageHeader, EmptyState } from '../components/common/UI';
 import { datasetService } from '../services/datasetService';
+import { useAuth } from '../context/AuthContext';
 
 const MAX_UPLOAD_SIZE_MB = Math.max(1, Math.min(5, Number(import.meta.env.VITE_MAX_UPLOAD_SIZE_MB) || 5));
 
 export default function DatasetsPage() {
   const navigate = useNavigate();
+  const { isPublicDemo } = useAuth();
 
   const [datasets, setDatasets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -122,7 +124,9 @@ export default function DatasetsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Datasets Repository"
-        description="View, search, and upload structured CSV datasets for comprehensive data quality assessment."
+        description={isPublicDemo
+          ? 'Explore synthetic example datasets. Public demo uploads are disabled; no visitor files are sent or stored.'
+          : 'View, search, and upload structured CSV datasets for comprehensive data quality assessment.'}
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -137,6 +141,7 @@ export default function DatasetsPage() {
             <Button
               variant="primary"
               icon={FileUp}
+              disabled={isPublicDemo}
               onClick={() => {
                 setUploadError(null);
                 setUploadSuccess(false);
@@ -144,11 +149,17 @@ export default function DatasetsPage() {
                 setShowUploadModal(true);
               }}
             >
-              Upload CSV
+              {isPublicDemo ? 'Uploads Disabled' : 'Upload CSV'}
             </Button>
           </div>
         }
       />
+
+      {isPublicDemo && (
+        <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+          These fictional sample files are bundled with the frontend. Uploads and changes to real datasets are disabled in public presentation mode.
+        </div>
+      )}
 
       {/* Filter and Search Bar */}
       <Card className="p-4">

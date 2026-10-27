@@ -29,7 +29,8 @@ export default function AppLayout({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout, isDemoMode } = useAuth();
+  const { user, logout, isDemoMode, isPublicDemo } = useAuth();
+  const demoExperience = isDemoMode || isPublicDemo;
 
   const currentNav = NAV_ITEMS.find((item) => item.path === location.pathname) || {
     name: 'Dashboard',
@@ -89,7 +90,7 @@ export default function AppLayout({ children }) {
               <p className="text-xs font-semibold text-slate-200 truncate">{user?.username || 'User'}</p>
               <p className="text-[11px] text-slate-500 truncate">{user?.email || 'Authenticated'}</p>
             </div>
-            {!isDemoMode && (
+            {!demoExperience && (
               <button
                 onClick={handleLogout}
                 title="Sign Out"
@@ -153,7 +154,7 @@ export default function AppLayout({ children }) {
                 <p className="text-xs font-semibold text-slate-200">{user?.username}</p>
                 <p className="text-[11px] text-slate-500">{user?.email}</p>
               </div>
-              {!isDemoMode && (
+              {!demoExperience && (
                 <button
                   onClick={() => {
                     setMobileMenuOpen(false);
@@ -189,12 +190,22 @@ export default function AppLayout({ children }) {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              Connected
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
+              isPublicDemo
+                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+            }`}>
+              <span className={`w-2 h-2 rounded-full ${isPublicDemo ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
+              {isPublicDemo ? 'Public demo' : 'Connected'}
             </span>
           </div>
         </header>
+
+        {isPublicDemo && (
+          <div role="status" className="bg-amber-50 border-b border-amber-200 px-4 py-2 text-center text-xs text-amber-900">
+            Public presentation mode: synthetic sample data only. Changes stay in this browser session; no database or file storage is used.
+          </div>
+        )}
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
           {children}

@@ -15,9 +15,11 @@ import { ScoreGauge, MissingDistributionChart } from '../components/charts/Analy
 import { datasetService } from '../services/datasetService';
 import { analysisService } from '../services/analysisService';
 import { cleaningService } from '../services/cleaningService';
+import { useAuth } from '../context/AuthContext';
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { isPublicDemo } = useAuth();
 
   const [datasets, setDatasets] = useState([]);
   const [featuredAnalysis, setFeaturedAnalysis] = useState(null);
@@ -83,14 +85,16 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title="Analytics Overview"
-        description="Monitor dataset health, quality metrics, and cleaning progress across all CSV repositories."
+        description={isPublicDemo
+          ? 'Explore illustrative metrics and synthetic sample datasets. Dashboard values are examples, not live account data.'
+          : 'Monitor dataset health, quality metrics, and cleaning progress across all CSV repositories.'}
         actions={
           <Button
             variant="primary"
-            icon={FileUp}
+            icon={isPublicDemo ? Database : FileUp}
             onClick={() => navigate('/datasets')}
           >
-            Upload New CSV
+            {isPublicDemo ? 'Explore Sample Data' : 'Upload New CSV'}
           </Button>
         }
       />
@@ -118,7 +122,9 @@ export default function DashboardPage() {
             <div>
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Datasets</p>
               <p className="text-2xl font-bold text-slate-900 mt-1">{datasets.length}</p>
-              <p className="text-xs text-slate-400 mt-0.5">Uploaded CSV repositories</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {isPublicDemo ? 'Fictional presentation examples' : 'Uploaded CSV repositories'}
+              </p>
             </div>
             <div className="w-10 h-10 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center">
               <Database className="w-5 h-5" />
@@ -148,7 +154,9 @@ export default function DashboardPage() {
             <div>
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Cleaned Versions</p>
               <p className="text-2xl font-bold text-slate-900 mt-1">{cleaningsCount}</p>
-              <p className="text-xs text-slate-400 mt-0.5">Completed jobs</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {isPublicDemo ? 'Sample and browser-only jobs' : 'Completed jobs'}
+              </p>
             </div>
             <div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
               <Sparkles className="w-5 h-5" />
@@ -161,7 +169,9 @@ export default function DashboardPage() {
             <div>
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Rows Evaluated</p>
               <p className="text-2xl font-bold text-slate-900 mt-1">{totalRowsCount.toLocaleString()}</p>
-              <p className="text-xs text-slate-400 mt-0.5">Across {datasets.length} files</p>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Across {datasets.length} {isPublicDemo ? 'sample files' : 'files'}
+              </p>
             </div>
             <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
               <CheckCircle2 className="w-5 h-5" />

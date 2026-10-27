@@ -10,8 +10,10 @@ import {
 import { Card, Button, Badge, PageHeader, EmptyState } from '../components/common/UI';
 import { datasetService } from '../services/datasetService';
 import { cleaningService } from '../services/cleaningService';
+import { useAuth } from '../context/AuthContext';
 
 export default function CleaningHistoryPage() {
+  const { isPublicDemo } = useAuth();
   const [datasets, setDatasets] = useState([]);
   const [selectedDatasetId, setSelectedDatasetId] = useState('all');
   const [cleaningRecords, setCleaningRecords] = useState([]);
@@ -105,7 +107,9 @@ export default function CleaningHistoryPage() {
     <div className="space-y-6">
       <PageHeader
         title="Cleaning History"
-        description="Audit log of previous data cleaning jobs, output metadata, and download access for cleaned datasets."
+        description={isPublicDemo
+          ? 'Example cleaning records and browser-only demo jobs. Demo history is temporary and is not stored.'
+          : 'Audit log of previous data cleaning jobs, output metadata, and download access for cleaned datasets.'}
         actions={
           <Button
             variant="outline"
@@ -118,6 +122,12 @@ export default function CleaningHistoryPage() {
           </Button>
         }
       />
+
+      {isPublicDemo && (
+        <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+          History entries are synthetic examples or temporary changes in this browser session; they are not database records.
+        </div>
+      )}
 
       {/* Dataset Filter */}
       {datasets.length > 0 && (
@@ -160,7 +170,9 @@ export default function CleaningHistoryPage() {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
           </svg>
-          <p className="text-xs text-slate-500">Loading cleaning audit history from database...</p>
+          <p className="text-xs text-slate-500">
+            {isPublicDemo ? 'Loading synthetic cleaning examples...' : 'Loading cleaning audit history from database...'}
+          </p>
         </div>
       ) : cleaningRecords.length === 0 ? (
         <EmptyState
@@ -197,9 +209,9 @@ export default function CleaningHistoryPage() {
                       {summarizeOperations(record.cleaning_summary)}
                     </td>
                     <td className="py-3.5 px-5">
-                      <Badge variant={record.status === 'completed' ? 'success' : 'danger'}>
+                      <Badge variant={record.status === 'completed' ? 'success' : record.status === 'demo-only' ? 'warning' : 'danger'}>
                         {record.status === 'completed' && <CheckCircle className="w-3 h-3 mr-1 inline" />}
-                        {record.status}
+                        {record.status === 'demo-only' ? 'Demo only' : record.status}
                       </Badge>
                     </td>
                     <td className="py-3.5 px-5 font-mono text-xs font-semibold text-slate-800">
@@ -220,7 +232,7 @@ export default function CleaningHistoryPage() {
                         disabled={downloadingId === record.id}
                         onClick={() => handleDownload(record)}
                       >
-                        Download CSV
+                        {isPublicDemo ? 'Download Sample CSV' : 'Download CSV'}
                       </Button>
                     </td>
                   </tr>

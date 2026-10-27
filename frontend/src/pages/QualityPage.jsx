@@ -12,10 +12,12 @@ import { Card, Button, Badge, PageHeader, EmptyState } from '../components/commo
 import { ScoreGauge, PenaltyBreakdownChart, MissingDistributionChart } from '../components/charts/AnalyticsCharts';
 import { datasetService } from '../services/datasetService';
 import { analysisService } from '../services/analysisService';
+import { useAuth } from '../context/AuthContext';
 
 export default function QualityPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isPublicDemo } = useAuth();
 
   const [datasets, setDatasets] = useState([]);
   const [selectedDatasetId, setSelectedDatasetId] = useState(
@@ -102,7 +104,9 @@ export default function QualityPage() {
     <div className="space-y-6">
       <PageHeader
         title="Data Quality Assessment"
-        description="Comprehensive dataset audit covering missing values, duplicates, domain validity, and distribution statistics."
+        description={isPublicDemo
+          ? 'Explore illustrative quality results for synthetic datasets. Demo audit values are precomputed examples.'
+          : 'Comprehensive dataset audit covering missing values, duplicates, domain validity, and distribution statistics.'}
         actions={
           <div className="flex items-center gap-2">
             <Button
@@ -112,7 +116,7 @@ export default function QualityPage() {
               isLoading={isAnalyzing}
               disabled={!selectedDatasetId || isAnalyzing || isLoading}
             >
-              Run Audit
+              {isPublicDemo ? 'Show Sample Audit' : 'Run Audit'}
             </Button>
             <Button
               variant="primary"

@@ -10,10 +10,12 @@ import {
 import { Card, Button, Badge, PageHeader, FormField } from '../components/common/UI';
 import { datasetService } from '../services/datasetService';
 import { cleaningService } from '../services/cleaningService';
+import { useAuth } from '../context/AuthContext';
 
 export default function CleaningPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isPublicDemo } = useAuth();
 
   const [datasets, setDatasets] = useState([]);
   const [selectedDatasetId, setSelectedDatasetId] = useState(
@@ -174,7 +176,9 @@ export default function CleaningPage() {
     <div className="space-y-6">
       <PageHeader
         title="Data Cleaning Studio"
-        description="Configure deterministic transformations including missing imputation, deduplication, whitespace trimming, and outlier handling."
+        description={isPublicDemo
+          ? 'Try supported transformations on fictional sample rows. Results are browser-only and are discarded when this page reloads.'
+          : 'Configure deterministic transformations including missing imputation, deduplication, whitespace trimming, and outlier handling.'}
         actions={
           <div className="flex items-center gap-2.5">
             <Button
@@ -192,7 +196,7 @@ export default function CleaningPage() {
               onClick={() => setShowApplyConfirm(true)}
               disabled={!selectedDatasetId || isPreviewLoading || isApplying}
             >
-              Apply Cleaning
+              {isPublicDemo ? 'Apply Sample Cleaning' : 'Apply Cleaning'}
             </Button>
           </div>
         }
@@ -248,12 +252,17 @@ export default function CleaningPage() {
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-2 text-emerald-800 font-semibold text-sm">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-              <span>Cleaning Completed & Persisted Successfully!</span>
+              <span>
+                {isPublicDemo
+                  ? 'Sample cleaning complete (browser-only; not saved)'
+                  : 'Cleaning Completed & Persisted Successfully!'}
+              </span>
             </div>
             <Badge variant="success">Job #{successRecord.id}</Badge>
           </div>
           <p className="text-xs text-emerald-700">
-            Saved as separate file <code className="font-mono">{successRecord.output_filename}</code> with{' '}
+            {isPublicDemo ? 'Generated sample output ' : 'Saved as separate file '}
+            <code className="font-mono">{successRecord.output_filename}</code> with{' '}
             <strong>{successRecord.output_row_count} rows</strong> and{' '}
             <strong>{successRecord.output_column_count} columns</strong>.
           </p>
@@ -270,7 +279,7 @@ export default function CleaningPage() {
               size="sm"
               onClick={() => cleaningService.downloadCleanedFile(successRecord.id, `${selectedDataset?.original_filename || 'dataset'}_cleaned.csv`)}
             >
-              Download Cleaned CSV
+              {isPublicDemo ? 'Download Sample CSV' : 'Download Cleaned CSV'}
             </Button>
           </div>
         </div>
@@ -645,18 +654,25 @@ export default function CleaningPage() {
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
-                <h4 className="font-bold text-slate-900 text-base">Apply Cleaning Operations?</h4>
-                <p className="text-xs text-slate-500">Confirm permanent transformation</p>
+                <h4 className="font-bold text-slate-900 text-base">
+                  {isPublicDemo ? 'Generate Sample Cleaning?' : 'Apply Cleaning Operations?'}
+                </h4>
+                <p className="text-xs text-slate-500">
+                  {isPublicDemo ? 'Confirm browser-only sample transformation' : 'Confirm permanent transformation'}
+                </p>
               </div>
             </div>
 
             <p className="text-xs text-slate-600">
-              This will execute transformations on{' '}
-              <strong>{selectedDataset?.original_filename}</strong>, serialize a new cleaned CSV file, and record the job in your PostgreSQL history.
+              {isPublicDemo
+                ? <>This simulates supported transformations on fictional sample <strong>{selectedDataset?.original_filename}</strong> in temporary browser memory. No files are uploaded or saved.</>
+                : <>This will execute transformations on <strong>{selectedDataset?.original_filename}</strong>, serialize a new cleaned CSV file, and record the job in your PostgreSQL history.</>}
             </p>
 
             <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800">
-              <strong>Immutability Guarantee:</strong> Your original uploaded file will not be overwritten or modified.
+              {isPublicDemo
+                ? <><strong>Demo isolation:</strong> Only bundled fictional sample rows change; authenticated user files and records are not accessed.</>
+                : <><strong>Immutability Guarantee:</strong> Your original uploaded file will not be overwritten or modified.</>}
             </div>
 
             <div className="flex justify-end gap-2.5 pt-2">
@@ -673,7 +689,7 @@ export default function CleaningPage() {
                 isLoading={isApplying}
                 disabled={isApplying}
               >
-                Confirm & Clean
+                {isPublicDemo ? 'Generate Sample' : 'Confirm & Clean'}
               </Button>
             </div>
           </div>

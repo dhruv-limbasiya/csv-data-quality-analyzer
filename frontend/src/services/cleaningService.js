@@ -1,10 +1,13 @@
 import api from './api';
+import { PUBLIC_DEMO_MODE } from '../config/publicDemo';
+import { publicDemoService } from './publicDemoService';
 
 export const cleaningService = {
   /**
    * Preview cleaning transformations in memory (no disk/db write)
    */
   async previewCleaning(datasetId, config, previewLimit = 10) {
+    if (PUBLIC_DEMO_MODE) return publicDemoService.previewCleaning(datasetId, config, previewLimit);
     const res = await api.post(`/api/datasets/${datasetId}/clean/preview`, {
       config,
       preview_limit: previewLimit,
@@ -16,6 +19,7 @@ export const cleaningService = {
    * Apply cleaning and save permanent cleaned CSV file and PostgreSQL record
    */
   async applyCleaning(datasetId, config) {
+    if (PUBLIC_DEMO_MODE) return publicDemoService.applyCleaning(datasetId, config);
     const res = await api.post(`/api/datasets/${datasetId}/clean`, {
       config,
     });
@@ -26,6 +30,7 @@ export const cleaningService = {
    * Get cleaning history for a dataset
    */
   async getDatasetCleanings(datasetId, skip = 0, limit = 50) {
+    if (PUBLIC_DEMO_MODE) return publicDemoService.getDatasetCleanings(datasetId, skip, limit);
     const res = await api.get(`/api/datasets/${datasetId}/cleanings`, {
       params: { skip, limit },
     });
@@ -36,6 +41,7 @@ export const cleaningService = {
    * Get cleaning record details by ID
    */
   async getCleaningRecord(cleaningId) {
+    if (PUBLIC_DEMO_MODE) return publicDemoService.getCleaningRecord(cleaningId);
     const res = await api.get(`/api/cleanings/${cleaningId}`);
     return res.data;
   },
@@ -45,6 +51,7 @@ export const cleaningService = {
    * Returns a Blob and triggers safe browser download
    */
   async downloadCleanedFile(cleaningId, fallbackFilename = 'cleaned_dataset.csv') {
+    if (PUBLIC_DEMO_MODE) return publicDemoService.downloadCleanedFile(cleaningId, fallbackFilename);
     const res = await api.get(`/api/cleanings/${cleaningId}/download`, {
       params: { export_safe: true },
       responseType: 'blob',

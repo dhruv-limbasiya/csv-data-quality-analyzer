@@ -7,12 +7,13 @@ import { useAuth } from '../context/AuthContext';
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login } = useAuth();
+  const { login, startDemo, isDemoMode } = useAuth();
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
 
   // Preserve intended destination after login
   const from = location.state?.from?.pathname || '/dashboard';
@@ -44,13 +45,28 @@ export default function LoginPage() {
     }
   };
 
+  const handleDemo = async () => {
+    setIsDemoLoading(true);
+    setError('');
+    try {
+      await startDemo();
+      navigate(from, { replace: true });
+    } catch (err) {
+      setError(err.formattedMessage || 'Demo access could not be started. Check the demo configuration and API availability, then try again.');
+    } finally {
+      setIsDemoLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
         <div className="inline-flex w-12 h-12 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-400 items-center justify-center text-white shadow-md mb-3">
           <FileSpreadsheet className="w-6 h-6" />
         </div>
-        <h2 className="text-2xl font-bold tracking-tight text-slate-900">Sign in to your account</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+          {isDemoMode ? 'Enter the presentation demo' : 'Sign in to your account'}
+        </h2>
         <p className="mt-1 text-xs text-slate-500">
           CSV Data Quality Analyzer & Cleaning Platform
         </p>
@@ -58,6 +74,32 @@ export default function LoginPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <Card className="p-8 bg-white shadow-md border-slate-200">
+          {isDemoMode ? (
+            <div className="space-y-4">
+              {error && (
+                <div role="alert" className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+              <p className="text-sm text-slate-600 text-center">
+                Start an isolated presentation session. No account credentials are needed.
+              </p>
+              <Button
+                type="button"
+                variant="primary"
+                size="md"
+                className="w-full"
+                isLoading={isDemoLoading}
+                disabled={isDemoLoading}
+                icon={ArrowRight}
+                onClick={handleDemo}
+              >
+                Enter Demo
+              </Button>
+            </div>
+          ) : (
+          <>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-700 flex items-center gap-2">
@@ -119,6 +161,8 @@ export default function LoginPage() {
               </Link>
             </p>
           </div>
+          </>
+          )}
         </Card>
       </div>
     </div>

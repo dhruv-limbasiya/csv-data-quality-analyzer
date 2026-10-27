@@ -1,5 +1,7 @@
 import api from './api';
 import axios from 'axios';
+import { PUBLIC_DEMO_MODE } from '../config/publicDemo';
+import { publicDemoService } from './publicDemoService';
 
 const DIRECT_UPLOAD = import.meta.env.VITE_DIRECT_UPLOAD === 'true';
 
@@ -8,6 +10,7 @@ export const datasetService = {
    * List datasets owned by current user
    */
   async listDatasets() {
+    if (PUBLIC_DEMO_MODE) return publicDemoService.listDatasets();
     const res = await api.get('/api/datasets');
     return res.data; // { total: int, items: [...] }
   },
@@ -16,6 +19,7 @@ export const datasetService = {
    * Get dataset metadata and sample preview rows
    */
   async getDataset(id) {
+    if (PUBLIC_DEMO_MODE) return publicDemoService.getDataset(id);
     const res = await api.get(`/api/datasets/${id}`);
     return res.data;
   },
@@ -25,6 +29,7 @@ export const datasetService = {
    * onUploadProgress callback optional
    */
   async uploadDataset(file, onProgress, { signal } = {}) {
+    if (PUBLIC_DEMO_MODE) return publicDemoService.uploadDataset(file, onProgress, { signal });
     if (DIRECT_UPLOAD) {
       const authorization = await api.post('/api/datasets/upload/authorize', {
         filename: file.name,
